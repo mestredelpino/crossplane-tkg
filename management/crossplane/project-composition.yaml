@@ -6,12 +6,6 @@ metadata:
   labels:
     crossplane.io/xrd: xprojects.deepthought.magrathea.lab
 spec:
-  # patchSets:
-  # - name: my-patchset
-  #   patches:
-  #   - type: FromCompositeFieldPath
-  #     fromFieldPath: metadata.name
-  #     toFieldPath: spec.forProvider.region
   writeConnectionSecretsToNamespace: crossplane-system
   compositeTypeRef:
     apiVersion: deepthought.magrathea.lab/v1alpha1
@@ -72,12 +66,6 @@ spec:
                     value: YXBpVmVyc2lvbjogYXBpc2VydmVyLmNvbmZpZy5rOHMuaW8vdjEKa2luZDogRW5jcnlwdGlvbkNvbmZpZ3VyYXRpb24KcmVzb3VyY2VzOgogIC0gcmVzb3VyY2VzOgogICAgLSBzZWNyZXRzCiAgICBwcm92aWRlcnM6CiAgICAtIGFlc2NiYzoKICAgICAgICBrZXlzOgogICAgICAgIC0gbmFtZToga2V5MQogICAgICAgICAgc2VjcmV0OiBjMlZqY21WME1USXoKICAgIC0gaWRlbnRpdHk6IHt9
         providerConfigRef:
           name: provider-kubernetes-supervisor
-      #   writeConnectionSecretToRef:
-      #     namespace: crossplane-system
-      #     name: kaaaaaaaaaaaaaa
-      # connectionDetails:
-
-      #   - fromConnectionSecretKey: kubeconfig
     patches:
     # Change name of kubernetes provider "Object" reference in management cluster
     - type: FromCompositeFieldPath
@@ -99,16 +87,6 @@ spec:
         - type: string
           string:
             fmt: "%s-extensions-ca"
-  # - name: cluster-kubeconfig2
-  #   base:
-  #     apiVersion: kubernetes.crossplane.io/v1alpha1
-  #     kind: Object
-  #     metadata:
-  #       name: replace
-  #       namespace: crossplane-system
-  #     spec:
-  #       forProvider:
-  #         manifest:
   - name: cluster-kubeconfig
     base:
       apiVersion: kubernetes.crossplane.io/v1alpha1
@@ -154,13 +132,6 @@ spec:
         - type: string
           string:
             fmt: "%s-kubeconfig-es"
-    # - type: FromCompositeFieldPath
-    #   fromFieldPath: spec.projectName
-    #   toFieldPath: spec.forProvider.manifest.spec.data[0].secretKey
-    #   transforms:
-    #     - type: string
-    #       string:
-    #         fmt: "%s-kubeconfig"
     - type: FromCompositeFieldPath
       fromFieldPath: spec.projectName
       toFieldPath: spec.forProvider.manifest.metadata.name
@@ -175,17 +146,6 @@ spec:
         - type: string
           string:
             fmt: "%s-kubeconfig"
-
-    # - type: FromCompositeFieldPath
-    #   fromFieldPath: metadata.name
-    #   toFieldPath: metadata.annotations
-    #   transforms:
-    #     - type: string
-    #       string:
-    #         fmt: "%s-cluster-kubeconfig"
-
-    # NOW RESOURCES TO BE ADDED IN THE MIDDLEWARE (MANAGEMENT CLUSTER)
-    # Configmap registring cluster
   # CREATE A PROVIDER CONFIG IN ORDER TO BE ABLE TO DEPLOY KUBERNETES RESOURCES TO THE CLIENT CLUSTER
   - name: providerconfig-kubernetes
     base:
@@ -234,7 +194,6 @@ spec:
           string:
             fmt: "%s-kubeconfig"
   # CREATE A PROVIDER CONFIG IN ORDER TO BE ABLE TO DEPLOY HELM RESOURCES TO THE CLIENT CLUSTER
- 
   - name: providerconfig-helm
     base:
       apiVersion: kubernetes.crossplane.io/v1alpha1
@@ -260,13 +219,6 @@ spec:
         providerConfigRef:
           name: provider-kubernetes-local
     patches:
-    # - type: FromCompositeFieldPath
-    #   fromFieldPath: spec.projectName
-    #   toFieldPath: metadata.name
-    #   transforms:
-    #     - type: string
-    #       string:
-    #         fmt: "%s-providerconfig-helm"
     - type: FromCompositeFieldPath
       fromFieldPath: spec.projectName
       toFieldPath: spec.forProvider.manifest.metadata.name
@@ -369,9 +321,6 @@ spec:
         providerConfigRef:
           name: provider-kubernetes-local
     patches:
-    # - type: FromCompositeFieldPath
-    #   fromFieldPath: metadata.name
-    #   toFieldPath: metadata.name
     - type: FromCompositeFieldPath
       fromFieldPath: spec.projectName
       toFieldPath: spec.providerConfigRef.name
@@ -379,18 +328,6 @@ spec:
         - type: string
           string:
             fmt: "provider-kubernetes-%s"
-
-    # - type: CombineFromComposite
-    #   combine:
-    #     variables:
-    #       - fromFieldPath: metadata.name
-    #       - fromFieldPath: metadata.name
-    #     strategy: string
-    #     string:
-    #       fmt: "%s-%s-deployment"
-    #   toFieldPath: metadata.name
-
-
 
   - name: ingress-nginx-helm
     base:
@@ -421,100 +358,3 @@ spec:
         - type: string
           string:
             fmt: "provider-helm-%s"
-            # values:
-            #   persistence:
-            #     enabled: false
-            #   mariadb:
-            #     enabled: false
-            #   externalDatabase:
-            #     create: true
-            #     database: wordpress
-            #     port: 3306
-            # set: 
-            #   - name: externalDatabase.host
-            #     valueFrom: 
-            #       secretKeyRef: 
-            #         name: 
-            #         namespace: crossplane-system
-            #         key: endpoint
-            #   - name: externalDatabase.user
-            #     valueFrom: 
-            #       secretKeyRef: 
-            #         name: 
-            #         namespace: crossplane-system
-            #         key: username
-            #   - name: externalDatabase.password
-            #     valueFrom: 
-            #       secretKeyRef: 
-            #         name: 
-            #         namespace: crossplane-system
-            #         key: password
-
-  # - name: rbac-admin-role
-  #   base:
-  #     apiVersion: kubernetes.crossplane.io/v1alpha1
-  #     kind: Object
-  #     metadata:
-  #       name: rbac-admin-role
-  #       namespace: crossplane-system
-  #     spec:
-  #       forProvider:
-  #         manifest:
-  #           apiVersion: rbac.authorization.k8s.io/v1
-  #           kind: Role
-  #           metadata:
-  #             namespace: NAMESPACE
-  #             name: NAMESPACE-ADMIN-ROLE
-  #           rules:
-  #           - apiGroups: ["mapp.magrathea.lab/v1alpha1"]
-  #             resources: ["mapps"]
-  #             verbs: ["*"]
-  #       providerConfigRef:
-  #         name: provider-kubernetes-local
-  #   patches:
-  #   - type: FromCompositeFieldPath
-  #     fromFieldPath: spec.projectName
-  #     toFieldPath: spec.forProvider.manifest.metadata.namespace
-  #   - type: FromCompositeFieldPath
-  #     fromFieldPath: spec.projectName
-  #     toFieldPath: spec.forProvider.manifest.metadata.name
-  #     transforms:
-  #       - type: string
-  #         string:
-  #           fmt: "%s-admin"
-  # - name: rbac-admin-rolebinding
-  #   base:
-  #     apiVersion: kubernetes.crossplane.io/v1alpha1
-  #     kind: Object
-  #     metadata:
-  #       name: rbac-admin-rolebinding
-  #       namespace: crossplane-system
-  #     spec:
-  #       forProvider:
-  #         manifest:
-  #           apiVersion: rbac.authorization.k8s.io/v1
-  #           kind: RoleBinding
-  #           metadata:
-  #             name: namespace-admin-rolebinding
-  #             namespace: your-namespace
-  #           subjects:
-  #             - kind: User  # You can also use 'ServiceAccount' or 'Group' as needed
-  #               name: admin-user  # Replace with the user or service account name
-  #               apiGroup: rbac.authorization.k8s.io
-  #           roleRef:
-  #             kind: Role
-  #             name: namespace-admin-role
-  #             apiGroup: rbac.authorization.k8s.io
-  #       providerConfigRef:
-  #         name: provider-kubernetes-dev01
-  #   patches:
-  #   - type: FromCompositeFieldPath
-  #     fromFieldPath: spec.projectName
-  #     toFieldPath: spec.forProvider.manifest.metadata.namespace
-  #   - type: FromCompositeFieldPath
-  #     fromFieldPath: spec.projectName
-  #     toFieldPath: spec.forProvider.manifest.roleRef.name
-  #     transforms:
-  #       - type: string
-  #         string:
-  #           fmt: "%s-admin"
