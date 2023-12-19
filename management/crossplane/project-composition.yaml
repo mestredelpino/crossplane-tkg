@@ -1,0 +1,520 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: project
+  namespace: crossplane-system
+  labels:
+    crossplane.io/xrd: xprojects.deepthought.magrathea.lab
+spec:
+  # patchSets:
+  # - name: my-patchset
+  #   patches:
+  #   - type: FromCompositeFieldPath
+  #     fromFieldPath: metadata.name
+  #     toFieldPath: spec.forProvider.region
+  writeConnectionSecretsToNamespace: crossplane-system
+  compositeTypeRef:
+    apiVersion: deepthought.magrathea.lab/v1alpha1
+    kind: XProject
+  resources:
+  # CREATE A CLUSTER FOR THE PROJECT - CLIENT
+  - name: project-cluster
+    base:
+      apiVersion: kubernetes.crossplane.io/v1alpha1
+      kind: Object
+      metadata:
+        name: replace
+        namespace: crossplane-system
+      spec:
+        forProvider:
+          manifest:
+            apiVersion: cluster.x-k8s.io/v1beta1
+            kind: Cluster
+            metadata:
+              name: client03
+              namespace: ns1
+              labels:
+                deepthought.magreathea.lab/managed-resource: 'true'
+            spec:
+              clusterNetwork:
+                services:
+                  cidrBlocks: ["198.51.100.0/12"]
+                pods:
+                  cidrBlocks: ["192.0.2.0/16"]
+                serviceDomain: "cluster.local"
+              topology:
+                class: tanzukubernetescluster
+                version: v1.23.8---vmware.2-tkg.2-zshippable 
+                controlPlane:
+                  replicas: 1
+                workers:
+                  machineDeployments:
+                    - class: node-pool
+                      name: workervm
+                      replicas: 1
+                      variables:
+                        overrides:
+                        - name: vmClass
+                          value: best-effort-small
+                variables:
+                  - name: extensionCert
+                    value:
+                      contentSecret:
+                        key: tls.crt
+                        name: client03-extensions-ca
+                  - name: vmClass
+                    value: best-effort-small
+                  - name: storageClass
+                    value: nfs
+                  - name: defaultStorageClass
+                    value: nfs
+                  - name: clusterEncryptionConfigYaml
+                    value: YXBpVmVyc2lvbjogYXBpc2VydmVyLmNvbmZpZy5rOHMuaW8vdjEKa2luZDogRW5jcnlwdGlvbkNvbmZpZ3VyYXRpb24KcmVzb3VyY2VzOgogIC0gcmVzb3VyY2VzOgogICAgLSBzZWNyZXRzCiAgICBwcm92aWRlcnM6CiAgICAtIGFlc2NiYzoKICAgICAgICBrZXlzOgogICAgICAgIC0gbmFtZToga2V5MQogICAgICAgICAgc2VjcmV0OiBjMlZqY21WME1USXoKICAgIC0gaWRlbnRpdHk6IHt9
+        providerConfigRef:
+          name: provider-kubernetes-supervisor
+      #   writeConnectionSecretToRef:
+      #     namespace: crossplane-system
+      #     name: kaaaaaaaaaaaaaa
+      # connectionDetails:
+
+      #   - fromConnectionSecretKey: kubeconfig
+    patches:
+    # Change name of kubernetes provider "Object" reference in management cluster
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.projectName
+      toFieldPath: metadata.name
+      transforms:
+        - type: string
+          string:
+            fmt: "%s-cluster"
+    # Change cluster name
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.projectName
+      toFieldPath: spec.forProvider.manifest.metadata.name
+    # Change externsioncert secret name to <CLUSTER_NAME>-extensions-ca
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.projectName
+      toFieldPath: spec.forProvider.manifest.spec.topology.variables[0].value.contentSecret.name
+      transforms:
+        - type: string
+          string:
+            fmt: "%s-extensions-ca"
+  # - name: cluster-kubeconfig2
+  #   base:
+  #     apiVersion: kubernetes.crossplane.io/v1alpha1
+  #     kind: Object
+  #     metadata:
+  #       name: replace
+  #       namespace: crossplane-system
+  #     spec:
+  #       forProvider:
+  #         manifest:
+  - name: cluster-kubeconfig
+    base:
+      apiVersion: kubernetes.crossplane.io/v1alpha1
+      kind: Object
+      metadata:
+        name: replace
+        namespace: crossplane-system
+      spec:
+        forProvider:
+          manifest:
+            apiVersion: external-secrets.io/v1beta1
+            kind: ExternalSecret
+            metadata:
+              name: example
+              namespace: crossplane-system
+            spec:
+              refreshInterval: 5s
+              secretStoreRef:
+                name: supervisor
+                kind: SecretStore
+              target:
+                name: secret-to-be-created
+                creationPolicy: Owner
+              data:
+              - secretKey: kubeconfig
+                remoteRef:
+                  key: middleware-kubeconfig
+                  property: value
+        providerConfigRef:
+          name: provider-kubernetes-local
+    patches:
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.projectName
+      toFieldPath: spec.forProvider.manifest.spec.data[0].remoteRef.key
+      transforms:
+        - type: string
+          string:
+            fmt: "%s-kubeconfig"
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.projectName
+      toFieldPath: metadata.name
+      transforms:
+        - type: string
+          string:
+            fmt: "%s-kubeconfig-es"
+    # - type: FromCompositeFieldPath
+    #   fromFieldPath: spec.projectName
+    #   toFieldPath: spec.forProvider.manifest.spec.data[0].secretKey
+    #   transforms:
+    #     - type: string
+    #       string:
+    #         fmt: "%s-kubeconfig"
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.projectName
+      toFieldPath: spec.forProvider.manifest.metadata.name
+      transforms:
+        - type: string
+          string:
+            fmt: "%s-kubeconfig"
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.projectName
+      toFieldPath: spec.forProvider.manifest.spec.target.name
+      transforms:
+        - type: string
+          string:
+            fmt: "%s-kubeconfig"
+
+    # - type: FromCompositeFieldPath
+    #   fromFieldPath: metadata.name
+    #   toFieldPath: metadata.annotations
+    #   transforms:
+    #     - type: string
+    #       string:
+    #         fmt: "%s-cluster-kubeconfig"
+
+    # NOW RESOURCES TO BE ADDED IN THE MIDDLEWARE (MANAGEMENT CLUSTER)
+    # Configmap registring cluster
+  # CREATE A PROVIDER CONFIG IN ORDER TO BE ABLE TO DEPLOY KUBERNETES RESOURCES TO THE CLIENT CLUSTER
+  - name: providerconfig-kubernetes
+    base:
+      apiVersion: kubernetes.crossplane.io/v1alpha1
+      kind: Object
+      metadata:
+        name: replace
+        namespace: crossplane-system
+      spec:
+        forProvider:
+          manifest:
+            apiVersion: kubernetes.crossplane.io/v1alpha1
+            kind: ProviderConfig
+            metadata:
+              name: provider-kubernetes-dev01
+              namespace: crossplane-system
+            spec:
+              credentials:
+                source: Secret
+                secretRef:
+                  namespace: crossplane-system
+                  name: changeme-kubeconfig
+                  key: kubeconfig
+        providerConfigRef:
+          name: provider-kubernetes-local
+    patches:
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.projectName
+      toFieldPath: metadata.name
+      transforms:
+        - type: string
+          string:
+            fmt: "%s-providerconfig-kubernetes"
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.projectName
+      toFieldPath: spec.forProvider.manifest.metadata.name
+      transforms:
+        - type: string
+          string:
+            fmt: "provider-kubernetes-%s"
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.projectName
+      toFieldPath: spec.forProvider.manifest.spec.credentials.secretRef.name
+      transforms:
+        - type: string
+          string:
+            fmt: "%s-kubeconfig"
+  # CREATE A PROVIDER CONFIG IN ORDER TO BE ABLE TO DEPLOY HELM RESOURCES TO THE CLIENT CLUSTER
+ 
+  - name: providerconfig-helm
+    base:
+      apiVersion: kubernetes.crossplane.io/v1alpha1
+      kind: Object
+      metadata:
+        name: replace
+        namespace: crossplane-system
+      spec:
+        forProvider:
+          manifest:
+            apiVersion: helm.crossplane.io/v1beta1
+            kind: ProviderConfig
+            metadata:
+              name: provider-helm-dev01
+              namespace: crossplane-system
+            spec:
+              credentials:
+                source: Secret
+                secretRef:
+                  namespace: crossplane-system
+                  name: changeme-kubeconfig
+                  key: kubeconfig
+        providerConfigRef:
+          name: provider-kubernetes-local
+    patches:
+    # - type: FromCompositeFieldPath
+    #   fromFieldPath: spec.projectName
+    #   toFieldPath: metadata.name
+    #   transforms:
+    #     - type: string
+    #       string:
+    #         fmt: "%s-providerconfig-helm"
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.projectName
+      toFieldPath: spec.forProvider.manifest.metadata.name
+      transforms:
+        - type: string
+          string:
+            fmt: "provider-helm-%s"
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.projectName
+      toFieldPath: spec.forProvider.manifest.spec.credentials.secretRef.name
+      transforms:
+        - type: string
+          string:
+            fmt: "%s-kubeconfig"
+
+  - name: project-configmap-local
+    base:
+      apiVersion: kubernetes.crossplane.io/v1alpha1
+      kind: Object
+      metadata:
+        name: replace
+        namespace: crossplane-system
+      spec:
+        forProvider:
+          manifest:
+            apiVersion: v1
+            kind: ConfigMap
+            metadata:
+              name: game-demo
+              namespace: crossplane-system
+            data:
+              # property-like keys; each key maps to a simple value
+              cluster_name: changemme
+        providerConfigRef:
+          name: provider-kubernetes-local
+    patches:
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.projectName
+      toFieldPath: metadata.name
+      transforms:
+        - type: string
+          string:
+            fmt: "%s-cluster-registration"
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.projectName
+      toFieldPath: spec.forProvider.manifest.metadata.name
+      transforms:
+        - type: string
+          string:
+            fmt: "%s-cluster-registration"      
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.projectName
+      toFieldPath: spec.forProvider.manifest.data.cluster_name
+
+
+  - name: management-namespace
+    base:
+      apiVersion: kubernetes.crossplane.io/v1alpha1
+      kind: Object
+      metadata:
+        name: replace
+        namespace: crossplane-system
+      spec:
+        forProvider:
+          manifest:
+            apiVersion: v1
+            kind: Namespace
+            metadata:
+              name: mgmt
+              labels:
+                pod-security.kubernetes.io/enforce: privileged
+        providerConfigRef:
+          name: provider-kubernetes-clustername
+    patches:
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.projectName
+      toFieldPath: spec.providerConfigRef.name
+      transforms:
+        - type: string
+          string:
+            fmt: "provider-kubernetes-%s"
+
+  - name: initial-client-namespace
+    base:
+      apiVersion: kubernetes.crossplane.io/v1alpha1
+      kind: Object
+      metadata:
+        name: replace
+        namespace: crossplane-system
+      spec:
+        forProvider:
+          manifest:
+            apiVersion: v1
+            kind: Namespace
+            metadata:
+              name: development
+              # labels:
+                # name: development
+
+        providerConfigRef:
+          name: provider-kubernetes-local
+    patches:
+    # - type: FromCompositeFieldPath
+    #   fromFieldPath: metadata.name
+    #   toFieldPath: metadata.name
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.projectName
+      toFieldPath: spec.providerConfigRef.name
+      transforms:
+        - type: string
+          string:
+            fmt: "provider-kubernetes-%s"
+
+    # - type: CombineFromComposite
+    #   combine:
+    #     variables:
+    #       - fromFieldPath: metadata.name
+    #       - fromFieldPath: metadata.name
+    #     strategy: string
+    #     string:
+    #       fmt: "%s-%s-deployment"
+    #   toFieldPath: metadata.name
+
+
+
+  - name: ingress-nginx-helm
+    base:
+      apiVersion: helm.crossplane.io/v1beta1
+      kind: Release
+      metadata:
+        annotations: 
+          crossplane.io/external-name: ingress-nginx
+      spec:
+        forProvider:
+          chart:
+            name: nginx-ingress-controller
+            repository: https://charts.bitnami.com/bitnami
+            version: 9.9.4
+          namespace: ingress-nginx
+    patches:
+    - type: FromCompositeFieldPath
+      fromFieldPath: metadata.name
+      toFieldPath: metadata.name
+      transforms:
+        - type: string
+          string:
+            fmt: "ingress-nginx-%s"
+    - type: FromCompositeFieldPath
+      fromFieldPath: spec.projectName
+      toFieldPath: spec.providerConfigRef.name
+      transforms:
+        - type: string
+          string:
+            fmt: "provider-helm-%s"
+            # values:
+            #   persistence:
+            #     enabled: false
+            #   mariadb:
+            #     enabled: false
+            #   externalDatabase:
+            #     create: true
+            #     database: wordpress
+            #     port: 3306
+            # set: 
+            #   - name: externalDatabase.host
+            #     valueFrom: 
+            #       secretKeyRef: 
+            #         name: 
+            #         namespace: crossplane-system
+            #         key: endpoint
+            #   - name: externalDatabase.user
+            #     valueFrom: 
+            #       secretKeyRef: 
+            #         name: 
+            #         namespace: crossplane-system
+            #         key: username
+            #   - name: externalDatabase.password
+            #     valueFrom: 
+            #       secretKeyRef: 
+            #         name: 
+            #         namespace: crossplane-system
+            #         key: password
+
+  # - name: rbac-admin-role
+  #   base:
+  #     apiVersion: kubernetes.crossplane.io/v1alpha1
+  #     kind: Object
+  #     metadata:
+  #       name: rbac-admin-role
+  #       namespace: crossplane-system
+  #     spec:
+  #       forProvider:
+  #         manifest:
+  #           apiVersion: rbac.authorization.k8s.io/v1
+  #           kind: Role
+  #           metadata:
+  #             namespace: NAMESPACE
+  #             name: NAMESPACE-ADMIN-ROLE
+  #           rules:
+  #           - apiGroups: ["mapp.magrathea.lab/v1alpha1"]
+  #             resources: ["mapps"]
+  #             verbs: ["*"]
+  #       providerConfigRef:
+  #         name: provider-kubernetes-local
+  #   patches:
+  #   - type: FromCompositeFieldPath
+  #     fromFieldPath: spec.projectName
+  #     toFieldPath: spec.forProvider.manifest.metadata.namespace
+  #   - type: FromCompositeFieldPath
+  #     fromFieldPath: spec.projectName
+  #     toFieldPath: spec.forProvider.manifest.metadata.name
+  #     transforms:
+  #       - type: string
+  #         string:
+  #           fmt: "%s-admin"
+  # - name: rbac-admin-rolebinding
+  #   base:
+  #     apiVersion: kubernetes.crossplane.io/v1alpha1
+  #     kind: Object
+  #     metadata:
+  #       name: rbac-admin-rolebinding
+  #       namespace: crossplane-system
+  #     spec:
+  #       forProvider:
+  #         manifest:
+  #           apiVersion: rbac.authorization.k8s.io/v1
+  #           kind: RoleBinding
+  #           metadata:
+  #             name: namespace-admin-rolebinding
+  #             namespace: your-namespace
+  #           subjects:
+  #             - kind: User  # You can also use 'ServiceAccount' or 'Group' as needed
+  #               name: admin-user  # Replace with the user or service account name
+  #               apiGroup: rbac.authorization.k8s.io
+  #           roleRef:
+  #             kind: Role
+  #             name: namespace-admin-role
+  #             apiGroup: rbac.authorization.k8s.io
+  #       providerConfigRef:
+  #         name: provider-kubernetes-dev01
+  #   patches:
+  #   - type: FromCompositeFieldPath
+  #     fromFieldPath: spec.projectName
+  #     toFieldPath: spec.forProvider.manifest.metadata.namespace
+  #   - type: FromCompositeFieldPath
+  #     fromFieldPath: spec.projectName
+  #     toFieldPath: spec.forProvider.manifest.roleRef.name
+  #     transforms:
+  #       - type: string
+  #         string:
+  #           fmt: "%s-admin"

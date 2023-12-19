@@ -1,0 +1,35 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xprojects.deepthought.magrathea.lab
+  namespace: crossplane-system
+spec:
+  group: deepthought.magrathea.lab
+  names:
+    kind: XProject
+    plural: xprojects
+  claimNames:
+    kind: Project
+    plural: projects
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              projectName:
+                type: string
+              server:
+                type: object
+                properties:
+                  image:
+                    type: string
+                required:
+                - image
+            required:
+            - projectName

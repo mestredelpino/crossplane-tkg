@@ -1,0 +1,82 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: external-secrets-manager
+  namespace: crossplane-system
+rules:
+- apiGroups: 
+  - external-secrets.io
+  resources: 
+  - externalsecrets
+  verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: crossplane-external-secrets-manager
+  namespace: crossplane-system
+subjects:
+- kind: ServiceAccount
+  name: provider-kubernetes-c4b8ceb2ee71
+  namespace: crossplane-system
+  apiGroup: ""
+roleRef:
+  kind: ClusterRole
+  name: external-secrets-manager
+  apiGroup: ""
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: helm-provider-manager
+  # namespace: crossplane-system
+rules:
+- apiGroups: 
+  - helm.crossplane.io
+  resources: 
+  - "*"
+  verbs: 
+  - "*"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: crossplane-helm-provider-manager
+  # namespace: crossplane-system
+subjects:
+- kind: ServiceAccount
+  name: provider-kubernetes-c4b8ceb2ee71
+  namespace: crossplane-system
+  apiGroup: ""
+roleRef:
+  kind: ClusterRole
+  name: helm-provider-manager
+  apiGroup: ""
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubernetes-provider-manager
+  # namespace: crossplane-system
+rules:
+- apiGroups: 
+  - kubernetes.crossplane.io
+  resources: 
+  - "*"
+  verbs: 
+  - "*"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: crossplane-kubernetes-provider-manager
+  # namespace: crossplane-system
+subjects:
+- kind: ServiceAccount
+  name: provider-kubernetes-c4b8ceb2ee71
+  namespace: crossplane-system
+  apiGroup: ""
+roleRef:
+  kind: ClusterRole
+  name: kubernetes-provider-manager
+  apiGroup: ""
