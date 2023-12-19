@@ -1,0 +1,15 @@
+apiVersion: deepthought.magrathea.lab/v1alpha1
+kind: Project
+metadata:
+  name: mycoolapp-dev
+  namespace: crossplane-system
+spec: 
+  projectName: mycoolapp-dev
+---
+apiVersion: deepthought.magrathea.lab/v1alpha1
+kind: Project
+metadata:
+  name: mycoolapp-prod
+  namespace: crossplane-system
+spec: 
+  projectName: mycoolapp-prod
