@@ -5,6 +5,8 @@ metadata:
   namespace: crossplane-system
 spec:
   package: "crossplanecontrib/provider-kubernetes:main"
+  runtimeConfigRef:
+    name: provider-kubernetes-local
 ---
 apiVersion: kubernetes.crossplane.io/v1alpha1
 kind: ProviderConfig
@@ -31,7 +33,7 @@ spec:
 apiVersion: pkg.crossplane.io/v1beta1
 kind: DeploymentRuntimeConfig
 metadata:
-  name: provider-kubernetes
+  name: provider-kubernetes-local
   namespace: crossplane-system
 spec:
   deploymentTemplate:
